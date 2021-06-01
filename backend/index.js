@@ -1,18 +1,22 @@
 const express = require("express");
 const axios = require("axios");
+const cors = require("cors");
 const app = express(); //this is creating a server
+app.use(cors());
 const port = 5000;
+
+//using EXPRESS
 
 app.get("/", (req, res) => {
   console.log("This is our first express class");
-  res.write("<h1>Hello world</h1>");
-  res.end();
+  res.json({ message: "Hello wold" });
 });
 
 // REST Architecture
 //users/1/texts/4/paragraph/2
 app.get("/users", (req, res) => {
   res.end();
+  //TODO also make a axios request, for simply all users and return all users for the user route
 });
 // variable in url :id
 app.get("/users/:id", (req, res) => {
