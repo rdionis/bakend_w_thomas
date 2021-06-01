@@ -15,8 +15,10 @@ app.get("/", (req, res) => {
 // REST Architecture
 //users/1/texts/4/paragraph/2
 app.get("/users", (req, res) => {
-  res.end();
-  //TODO also make a axios request, for simply all users and return all users for the user route
+  axios.get("https://jsonplaceholder.typicode.com/users").then(function (response) {
+    console.log(response.data);
+    res.json(response.data);
+  }); //TODO also make a axios request, for simply all users and return all users for the user route
 });
 // variable in url :id
 app.get("/users/:id", (req, res) => {
