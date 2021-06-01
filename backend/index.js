@@ -2,7 +2,10 @@ const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
 const app = express(); //this is creating a server
+
 app.use(cors());
+app.use(express.json()); //this replaces the bodyParser
+
 const port = 5000;
 
 //using EXPRESS
@@ -16,7 +19,6 @@ app.get("/", (req, res) => {
 //users/1/texts/4/paragraph/2
 app.get("/users", (req, res) => {
   axios.get("https://jsonplaceholder.typicode.com/users").then(function (response) {
-    console.log(response.data);
     res.json(response.data);
   }); //TODO also make a axios request, for simply all users and return all users for the user route
 });
@@ -34,6 +36,11 @@ app.get("/users/:id", (req, res) => {
       console.log(response.data);
       res.json(response.data);
     });
+});
+
+app.post("/users/like", (req, res) => {
+  console.log(req.body);
+  res.json({ message: "success" });
 });
 
 app.listen(port, () => {

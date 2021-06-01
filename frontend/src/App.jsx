@@ -17,7 +17,24 @@ function App() {
     <div className="App">
       <ul>
         {users.map((user) => (
-          <li>{`${user.name} ---- ${user.email}`}</li>
+          <li>
+            {`${user.name} ---- ${user.email}`}
+            <button
+              onClick={(event) => {
+                fetch("http://localhost:5000/users/like", {
+                  method: "POST",
+                  body: JSON.stringify(user),
+                  headers: { "content-type": "application/json" },
+                })
+                  .then((res) => res.json())
+                  .then((res) => {
+                    console.log(res);
+                  });
+              }}
+            >
+              LIKE
+            </button>
+          </li>
         ))}
       </ul>
 
