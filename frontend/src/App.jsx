@@ -13,12 +13,15 @@ function App() {
         setUsers(res);
       });
   }, []);
+  console.log("====================================");
+  console.log(users);
+  console.log("====================================");
   return (
     <div className="App">
       <ul>
         {users.map((user) => (
-          <li>
-            {`${user.name} ---- ${user.email}`}
+          <li style={{ color: user.liked ? "red" : "" }}>
+            {`${user.name} ---- ${user.email} `}
             <button
               onClick={(event) => {
                 fetch("http://localhost:5000/users/like", {
@@ -28,11 +31,16 @@ function App() {
                 })
                   .then((res) => res.json())
                   .then((res) => {
+                    console.log(users);
+                    const usersClone = [...users];
                     console.log(res);
+                    const indexOfUpdatedUser = users.findIndex((u) => u.email === res.user.email);
+                    usersClone[indexOfUpdatedUser].liked = true;
+                    setUsers(usersClone);
                   });
               }}
             >
-              LIKE
+              {user.liked ? "Unlike" : "Like"}
             </button>
           </li>
         ))}
