@@ -1,7 +1,9 @@
 const express = require("express");
-const axios = require("axios");
+const axios = require("axios").default;
 const cors = require("cors");
 const app = express(); //this is creating a server
+const bcrypt = require("bcrypt");
+const { uuid } = require("uuidv4");
 const mongoose = require("mongoose");
 mongoose.connect("mongodb://localhost:27017/personliker", { useNewUrlParser: true, useUnifiedTopology: true });
 
@@ -9,10 +11,11 @@ app.use(cors());
 app.use(express.json()); //this replaces the bodyParser
 
 const port = 5000;
+const saltRounds = 10;
 
 //using EXPRESS
 
-const Person = mongoose.model("Person", { name: String, email: String });
+const Person = mongoose.model("Person", { name: String, email: String, password: String, verificationhash: String });
 
 app.get("/", (req, res) => {
   console.log("This is our first express class");
@@ -60,6 +63,45 @@ app.post("/users/like", (req, res) => {
     console.log("Person saved");
     res.json({ message: "success", user: { ...newPerson._doc, liked: true } });
   });
+});
+
+app.post("/users/register", async (req, res) => {
+  console.log(req.body);
+  const savedPerson = await Person.findOne({
+    email: req.body.email,
+  });
+  console.log(savedPerson);
+  if (!savedPerson) {
+    // 1 create verificationhash
+    const verificationhash = uuid();
+    // 2 create db object
+
+    const salt = bcrypt.genSaltSync(saltRounds);
+    console.log("SALT:" + salt);
+    const bcryptHash = bcrypt.hashSync(req.body.password.toString(), salt);
+
+    const newPerson = new Person({
+      name: req.body.name,
+      email: req.body.email,
+      password: bcryptHash,
+      verificationhash: verificationhash,
+    });
+    // newPerson.save().then(() => {
+    //   console.log("Person saved");
+    //   res.json({ message: "success", user: newPerson._doc });
+    // });
+    try {
+      await newPerson.save();
+      console.log("Person saved");
+      res.json({ message: "success", user: newPerson._doc });
+    } catch (error) {
+      throw error;
+    }
+
+    // 3 create email
+  } else {
+    res.json({ message: "User with " + req.body.email + " already exists" });
+  }
 });
 
 app.listen(port, () => {
