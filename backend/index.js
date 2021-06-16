@@ -15,7 +15,13 @@ const saltRounds = 10;
 
 //using EXPRESS
 
-const Person = mongoose.model("Person", { name: String, email: String, password: String, verificationhash: String });
+const Person = mongoose.model("Person", {
+  name: String,
+  email: String,
+  password: String,
+  verificationhash: String,
+  verifiedAt: Date,
+});
 
 app.get("/", (req, res) => {
   console.log("This is our first express class");
@@ -93,6 +99,33 @@ app.post("/users/register", async (req, res) => {
     try {
       await newPerson.save();
       console.log("Person saved");
+
+      const nodemailer = require("nodemailer");
+
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: "raqwebdev@gmail.com",
+          pass: "thisisannoying", // naturally, replace both with your real credentials or an application-specific password
+        },
+      });
+
+      const mailOptions = {
+        from: "verificationEmail@verification.com",
+        to: req.body.email,
+        subject: "Verification email",
+        text: `Back-end is fun: ${req.protocol}://${req.headers.host}/users/verify/${newPerson.verificationhash}`,
+        //http://localhost:3000/users/verify/8247318921hjkfh829478293
+      };
+
+      transporter.sendMail(mailOptions, function (error, info) {
+        if (error) {
+          console.log(error);
+        } else {
+          console.log("Email sent: " + info.response);
+        }
+      });
+
       res.json({ message: "success", user: newPerson._doc });
     } catch (error) {
       throw error;
@@ -103,6 +136,22 @@ app.post("/users/register", async (req, res) => {
     res.json({ message: "User with " + req.body.email + " already exists" });
   }
 });
+// 1
+app.get("/users/verify/:hash", async (req, res) => {
+  //the colon indicates a variable/dynamic part of the URL)
+  const hash = req.params.hash;
+  console.log(hash);
+  // 1 find the user BY the hash
+  const toBeVerified = await Person.findOne({ verificationhash: hash });
+  console.log(toBeVerified);
+  // 2 update some field to reflect that this user is now able to login since he/she is verified
+  toBeVerified.verifiedAt = Date.now();
+  await toBeVerified.save();
+  res.json({ message: `User with the email ${toBeVerified.email} is now verified.` });
+});
+
+// 3 login route
+// 4 checks if the user which tries to login has a verifiedAt field
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
