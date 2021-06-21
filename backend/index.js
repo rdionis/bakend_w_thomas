@@ -3,6 +3,7 @@ const axios = require("axios").default;
 const cors = require("cors");
 const app = express(); //this is creating a server
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const { uuid } = require("uuidv4");
 const mongoose = require("mongoose");
 mongoose.connect("mongodb://localhost:27017/personliker", { useNewUrlParser: true, useUnifiedTopology: true });
@@ -12,6 +13,9 @@ app.use(express.json()); //this replaces the bodyParser
 
 const port = 5000;
 const saltRounds = 10;
+
+//const salt = bcrypt.genSaltSync(saltRounds);
+const salt = "$2b$10$3Vo06yeDbV8UPtiNU/qI4e";
 
 //using EXPRESS
 
@@ -24,7 +28,7 @@ const Person = mongoose.model("Person", {
 });
 
 app.get("/", (req, res) => {
-  console.log("This is our first express class");
+  //console.log("This is our first express class");
   res.json({ message: "Hello, world" });
 });
 
@@ -35,7 +39,7 @@ app.get("/users", (req, res) =>
     Person.find().then((people) => {
       const mergedPeople = response.data.map((personFromJP) => {
         personFromJP.liked = people.findIndex((p) => p.email === personFromJP.email) >= 0; //same as !== -1 (inexistent index)
-        console.log(personFromJP.liked);
+        //console.log(personFromJP.liked);
         return personFromJP;
       });
       res.json(mergedPeople);
@@ -54,36 +58,35 @@ app.get("/users/:id", (req, res) => {
     // wait for the PROMISE with then
     .then(function (response) {
       //3. handle the response
-      console.log(response.data);
+      //console.log(response.data);
       res.json(response.data);
     });
 });
 
 app.post("/users/like", (req, res) => {
-  console.log(req.body);
+  //console.log(req.body);
   const newPerson = new Person({
     name: req.body.name,
     email: req.body.email,
   });
   newPerson.save().then(() => {
-    console.log("Person saved");
+    //console.log("Person saved");
     res.json({ message: "success", user: { ...newPerson._doc, liked: true } });
   });
 });
 
 app.post("/users/register", async (req, res) => {
-  console.log(req.body);
+  //console.log(req.body);
   const savedPerson = await Person.findOne({
     email: req.body.email,
   });
-  console.log(savedPerson);
+  //console.log(savedPerson);
   if (!savedPerson) {
     // 1 create verificationhash
     const verificationhash = uuid();
     // 2 create db object
 
-    const salt = bcrypt.genSaltSync(saltRounds);
-    console.log("SALT:" + salt);
+    //console.log("SALT:" + salt);
     const bcryptHash = bcrypt.hashSync(req.body.password.toString(), salt);
 
     const newPerson = new Person({
@@ -98,7 +101,7 @@ app.post("/users/register", async (req, res) => {
     // });
     try {
       await newPerson.save();
-      console.log("Person saved");
+      //console.log("Person saved");
 
       const nodemailer = require("nodemailer");
 
@@ -140,10 +143,10 @@ app.post("/users/register", async (req, res) => {
 app.get("/users/verify/:hash", async (req, res) => {
   //the colon indicates a variable/dynamic part of the URL)
   const hash = req.params.hash;
-  console.log(hash);
+  //console.log(hash);
   // 1 find the user BY the hash
   const toBeVerified = await Person.findOne({ verificationhash: hash });
-  console.log(toBeVerified);
+  //console.log(toBeVerified);
   // 2 update some field to reflect that this user is now able to login since he/she is verified
   toBeVerified.verifiedAt = Date.now();
   await toBeVerified.save();
@@ -151,7 +154,27 @@ app.get("/users/verify/:hash", async (req, res) => {
 });
 
 // 3 login route
-// 4 checks if the user which tries to login has a verifiedAt field
+
+app.post("/users/login", async (req, res) => {
+  const foundPerson = await Person.findOne({ email: req.body.email });
+  //console.log(foundPerson);
+  //console.log("SALT:" + salt);
+  const bcryptHash = bcrypt.hashSync(req.body.password.toString(), salt);
+  //console.log(bcryptHash);
+  //console.log(foundPerson.password);
+  // 4 checks if the user which tries to login has a verifiedAt field
+  if (!foundPerson.verifiedAt) {
+    res.json({ message: `User ${foundPerson} is not yet verified.` });
+  } else {
+    if (bcryptHash !== foundPerson.password) {
+      res.json({ message: `Password does not match.` });
+    } else {
+      const token = jwt.sign({ userId: foundPerson.id }, "secretKey");
+      //console.log(token); // eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIiLCJpYXQiOjE2MjQyODM4NzR9.iFd6k-bb1fjFc5smBRkrQzlxz2v6N9cVGOgCKaa2DvQ - ALWAYS STARTS WITH ey
+      res.json({ message: `User ${foundPerson} is now logged in.`, token: token });
+    }
+  }
+});
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
