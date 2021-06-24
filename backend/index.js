@@ -34,7 +34,7 @@ app.get("/", (req, res) => {
 
 // REST Architecture
 //users/1/texts/4/paragraph/2
-app.get("/users", (req, res) =>
+app.get("/users", (req, res) => {
   axios.get("https://jsonplaceholder.typicode.com/users").then(function (response) {
     Person.find().then((people) => {
       const mergedPeople = response.data.map((personFromJP) => {
@@ -44,8 +44,8 @@ app.get("/users", (req, res) =>
       });
       res.json(mergedPeople);
     });
-  })
-);
+  });
+});
 
 // variable in url :id
 app.get("/users/:id", (req, res) => {
@@ -169,10 +169,37 @@ app.post("/users/login", async (req, res) => {
     if (bcryptHash !== foundPerson.password) {
       res.json({ message: `Password does not match.` });
     } else {
-      const token = jwt.sign({ userId: foundPerson.id }, "secretKey");
+      const token = jwt.sign({ userId: foundPerson.id }, "secretKey", { expiresIn: "13m" }); //setting expiration time for the token (either a string or a number in miliseconds)
+
       //console.log(token); // eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIiLCJpYXQiOjE2MjQyODM4NzR9.iFd6k-bb1fjFc5smBRkrQzlxz2v6N9cVGOgCKaa2DvQ - ALWAYS STARTS WITH ey
       res.json({ message: `User ${foundPerson} is now logged in.`, token: token });
     }
+  }
+});
+
+app.get("/pictures", async (req, res) => {
+  //console.log(req);
+  const token = req.headers.token;
+  try {
+    const decodedToken = jwt.verify(token, "secretKey"); //this also throws an error when the token is expired
+    console.log(decodedToken);
+    // 1. add expiration date to token
+    // 1.5. create a refreshToken and store it in the database
+    // 1.5.5 create a refresh endpoint
+    // 1.5.5.5 create a interval in the frontend, that runs at the half of the expiration time and receives a fresh token
+    // 2. when it's expired redirect to login and block this attempt
+    console.log((decodedToken.exp * 1000) - Date.now())
+
+    const loggedInUser = await Person.findById(decodedToken.userId)
+    console.log(loggedInUser)
+    res.json(({ message: "token still valid", user: loggedInUser }))
+
+    // 3. find this user by its id from the token
+    //send resources back
+  } catch (error) {
+    console.log(error)
+    res.json(`token could not be verified because it is either invalid or expired`);
+
   }
 });
 
